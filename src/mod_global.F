@@ -113,9 +113,12 @@ MODULE GLOBAL
         REAL(SP),PARAMETER,DIMENSION(3)::beta=(/1.0_SP,1.0_SP/4.0_SP,2.0_SP/3.0_SP/)
        REAL(SP)::Kappa   ! parameter for order of muscl
 
+! Defined Nglob as real instead of integer to fit modeled take parameters
+
 ! some global variables
 ! Mloc1=Mloc+1, Nloc1=Nloc+1
-       INTEGER :: Mglob,Nglob,Mloc,Nloc,Mloc1,Nloc1
+       INTEGER :: Mglob,Mloc,Nloc,Mloc1,Nloc1
+       REAL :: Nglob
        INTEGER, PARAMETER :: Nghost = 3
        INTEGER :: Ibeg,Iend,Jbeg,Jend,Iend1,Jend1
 # if defined (CARTESIAN)
