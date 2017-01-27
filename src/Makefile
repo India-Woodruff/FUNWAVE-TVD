@@ -18,7 +18,7 @@
 #             FLAG_9 = -DZALPHA
 #             FLAG_10 = -DMANNING
 #             FLAG_11 = -DSPHERICAL_IJ_STATION
-#             FLAG_12 = -DVESSEL
+#             FLAG_12 = -DMETEO
 
 #--------------------------------------------------------------------------
 #  mpi defs 
@@ -66,7 +66,7 @@
 #  FUNWAVE-TVD Source Code.
 #--------------------------------------------------------------------------
 
-MODS  = mod_param.F	mod_global.F	mod_input.F mod_vessel.F \
+MODS  = mod_param.F	mod_global.F	mod_input.F mod_meteo.F \
 
 MAIN  = main.F bc.F fluxes.F init.F io.F tridiagnal.F       \
         breaker.F derivatives.F dispersion.F etauv_solver.F \
