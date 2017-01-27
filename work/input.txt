@@ -19,7 +19,7 @@ PY = 1
   !              DEPTH_TYPE=SLOPE: idealized slope, 
   !                                 need slope,SLP starting point, Xslp
   !                                 and depth_flat
-DEPTH_TYPE = SLOPE
+DEPTH_TYPE = FLAT
   ! Depth file
   ! depth format NOD: depth at node (M1xN1), ELE: depth at ele (MxN) 
   ! where (M1,N1)=(M+1,N+1)  
@@ -34,12 +34,12 @@ Xslp = 0.0
   ! -------------------PRINT---------------------------------
   ! PRINT*,
   ! result folder
-RESULT_FOLDER = ../results_gourlay/
+RESULT_FOLDER = ../results/
 
   ! ------------------DIMENSION-----------------------------
   ! global grid dimension
-Mglob = 2400
-Nglob = 70
+Mglob = 30
+Nglob = 3.7
 
   ! ----------------- TIME----------------------------------
   ! time: total computational time/ plot time / screen interval 
@@ -75,8 +75,8 @@ MASK_FILE = ../result_irr/mask_0218
 HotStartTime = 2160.066
 OutputStartNumber = 219
   ! ----------------SHIP WAKES ----------------------------
-VESSEL_FOLDER = ../vessel_gourlay/
-NumVessel = 1
+METEO_FOLDER = ../results/
+NumMeteo = 1
   ! ----------------WAVEMAKER------------------------------
   !  wave maker
   ! LEF_SOL- left boundary solitary, need AMP,DEP, LAGTIME
