@@ -287,13 +287,10 @@ SUBROUTINE METEO_FORCING
     METEOPressureEach = ZERO
     DO J=1,Nloc
     DO I=1,Mloc
-      Lves=(Xco(I)-Xves)*COS(ThetaMETEO(Kves)) + (Yco(J)-Yves)*SIN(ThetaMETEO(Kves))
-      Wves=-(Xco(I)-Xves)*SIN(ThetaMETEO(Kves)) + (Yco(J)-Yves)*COS(ThetaMETEO(Kves))
-      IF(ABS(Lves)<=0.5_SP*LengthMETEO(Kves).AND. &
-         ABS(Wves)<=0.5_SP*WidthMETEO(Kves)) THEN
-         METEOPressureEach(I,J) = PMETEO(Kves)  &
-                  *COS(PI*Lves/(AlphaMETEO(Kves)*LengthMETEO(Kves)))**2 &
-                  *COS(PI*Wves/(BetaMETEO(Kves)*WidthMETEO(Kves)))**2                  
+!     Lves=(Xco(I)-Xves)*COS(ThetaMETEO(Kves)) + (Yco(J)-Yves)*SIN(ThetaMETEO(Kves))
+!     Wves=-(Xco(I)-Xves)*SIN(ThetaMETEO(Kves)) + (Yco(J)-Yves)*COS(ThetaMETEO(Kves))			    !     IF(ABS(Lves)<=0.5_SP*LengthMETEO(Kves).AND. &
+!        ABS(Wves)<=0.5_SP*WidthMETEO(Kves)) THEN
+         METEOPressureEach(I,J) = ((1/(2*pi*(sigma**2)))*exp(-((Xco(I)-Xves)**2+(Yco(J)-Yves)**2)/(2*(sigma**2))))**2                 
       ENDIF
     ENDDO
     ENDDO
