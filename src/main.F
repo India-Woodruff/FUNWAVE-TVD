@@ -134,8 +134,8 @@ Program FUNWAVE_TVD
 !
 !-------------------------------------------------------------------------------------
      USE GLOBAL
-# if defined (VESSEL)
-     USE VESSEL_MODULE
+# if defined (METEO)
+     USE METEO_MODULE
 # endif
 
      IMPLICIT NONE
@@ -167,8 +167,8 @@ Program FUNWAVE_TVD
      TIME=TIME_COUPLING_1
 # endif
 
-# if defined (VESSEL)
-     CALL VESSEL_INITIAL
+# if defined (METEO)
+     CALL METEO_INITIAL
 # endif
 
 ! time integration
@@ -210,8 +210,8 @@ Program FUNWAVE_TVD
 	U0=U   !ykchoi(15. 08. 06.)
 	V0=V   !ykchoi
 
-# if defined (VESSEL)
-       CALL VESSEL_FORCING
+# if defined (METEO)
+       CALL METEO_FORCING
 # endif
 
      ! 3-ORDER RUNGE-KUTTA TIME STEPPING
