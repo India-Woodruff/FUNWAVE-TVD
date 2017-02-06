@@ -282,16 +282,27 @@ SUBROUTINE METEO_FORCING
 
     Xves = XMETEO2(Kves)*tmp1 +XMETEO1(Kves)*tmp2
     Yves = YMETEO2(Kves)*tmp1 +YMETEO1(Kves)*tmp2
+    x0=0.6
+    T=0.082
+    b=0.395
+    w=0.68
 
 ! rectangular
     METEOPressureEach = ZERO
     DO J=1,Nloc
-    DO I=1,Mloc
+   DO I=1,Mloc
 !     Lves=(Xco(I)-Xves)*COS(ThetaMETEO(Kves)) + (Yco(J)-Yves)*SIN(ThetaMETEO(Kves))
-!     Wves=-(Xco(I)-Xves)*SIN(ThetaMETEO(Kves)) + (Yco(J)-Yves)*COS(ThetaMETEO(Kves))			    !     IF(ABS(Lves)<=0.5_SP*LengthMETEO(Kves).AND. &
+!     Wves=-(Xco(I)-Xves)*SIN(ThetaMETEO(Kves)) + (Yco(J)-Yves)*COS(ThetaMETEO(Kves))	   
+!     IF(ABS(Lves)<=0.5_SP*LengthMETEO(Kves).AND. &
 !        ABS(Wves)<=0.5_SP*WidthMETEO(Kves)) THEN
-         METEOPressureEach(I,J) = ((1/(2*pi*(sigma**2)))*exp(-((Xco(I)-Xves)**2+(Yco(J)-Yves)**2)/(2*(sigma**2))))**2                 
-      ENDIF
+!        y=(-1.85:1.85:0.01)
+!        x=(0::30:0.01)
+        C=acosh(1.0/0.717);
+        Kb=2.0*C/b
+        Kw=2.0*C/w         
+!        [X,Y]=meshgrid(x,y)
+METEOPressureEach(I,J) =(T/(1.0-epsilon))*( sech(Kb*(Xco(I) - Xves))*sech(Kw*Yco(J)-Yves) - epsilon)                 
+!    ENDIF
     ENDDO
     ENDDO
 
