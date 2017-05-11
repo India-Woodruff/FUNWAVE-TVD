@@ -47,7 +47,10 @@
 !
 !  HISTORY :
 !    1/25/2017  Jim Kirby  Copied initial code from mod_METEO.F
-!
+!    5/3/2017 Updated and added to current FUNWAVE model IAW
+! ----------------------------------------------------------------------------- 
+! Accessed in init.F, main.F, sources.F
+!   
 !-------------------------------------------------------------------------------------
 
 # if defined (METEO)
@@ -62,6 +65,7 @@ MODULE METEO_MODULE
   USE MPI
 # endif
   IMPLICIT NONE
+ 
   SAVE
 
     INTEGER :: NumMETEO,Kves
@@ -71,7 +75,7 @@ MODULE METEO_MODULE
                                        TimeMETEO1,TimeMETEO2,ThetaMETEO
     REAL(SP),DIMENSION(:,:),ALLOCATABLE :: METEOPressureTotal,METEOPressureEach, &
                                        METEOPressureX,METEOPressureY
-    REAL(SP),DIMENSION(:),ALLOCATABLE ::  Xco,Yco
+    REAL(SP),DIMENSION(:),ALLOCATABLE ::  Xco, Yco
     LOGICAL :: OUT_METEO = .TRUE.
 
 
@@ -82,7 +86,16 @@ MODULE METEO_MODULE
 
 CONTAINS
   
-! READ METEO
+!------------------------------------------------------------------------------------
+!
+! Subroutine METEO_INITIAL
+!
+! READ METEO input
+!
+!  Last modified 3/20/17, IW
+!
+!------------------------------------------------------------------------------------
+
 
 SUBROUTINE METEO_INITIAL
   USE GLOBAL,ONLY : itmp1,itmp2,itmp3,itmp4
@@ -227,19 +240,40 @@ SUBROUTINE METEO_INITIAL
   ENDDO  ! end Kves
 
 End SUBROUTINE METEO_INITIAL
+!
+!-------------------------------------------------------------------------------------------------
+!
+!  Subroutine Meteo_forcing
+!
+!  Compute atmospheric pressure distribution p_a (METEOPressureTotal) and
+!  x and y derivatives of the pressure force/rho (METEOPressureX, METEOPressureY)
+!
+!  IW and JTK, 3/17. Last modified 3/24/17, IAW
+!
+!-------------------------------------------------------------------------------------------------
+!Added logical First Call 3/24/ IAW
 
 SUBROUTINE METEO_FORCING
-  USE GLOBAL,ONLY : Mloc,Nloc,tmp1,tmp2,SMALL,TIME,ZERO
+  USE GLOBAL,ONLY : Mloc,Nloc,tmp1,tmp2,SMALL,TIME,ZERO,Eta,RESULT_FOLDER   
   USE INPUT_READ
   IMPLICIT NONE
-  INTEGER :: Ifile,ierr,I,J
-  REAL(SP) :: Xves,Yves,Lves,Wves
+  LOGICAL :: FirstCall_Met = .TRUE.
+  INTEGER :: Ifile,ierr,I, J
+  REAL(SP) :: Xves,Yves,Lves,Wves,T,b,C,w,Kw,Kb,sech1,sech2, epsilon,Pmet
 
+
+ !    CHARACTER(LEN=80)::FILE_NAME=' '
+  !   CHARACTER(LEN=80)::TMP_NAME=' '
+  !!  CHARACTER(LEN=80)::FDIR=' '
+
+    ! FDIR=TRIM(RESULT_FOLDER)
+
+ 
   METEOPressureTotal = ZERO
 
   DO Kves = 1,NumMETEO
 
-    IF(TIME>TimeMETEO1(Kves).AND.TIME>TimeMETEO2(Kves)) THEN
+    IF(TIME>=TimeMETEO1(Kves).AND.TIME>TimeMETEO2(Kves)) THEN
 
          TimeMETEO1(Kves)=TimeMETEO2(Kves)
          XMETEO1(Kves) = XMETEO2(Kves)
@@ -279,29 +313,46 @@ SUBROUTINE METEO_FORCING
       tmp1=1.0_SP - tmp2;
       ENDIF  ! no more data?
     ENDIF ! time>time_1
+!Look at eta at first call (before running)  and then continue as the pressure forcing moves on with time 3/24/17 IAW
+    IF(FirstCall_Met)THEN
+      Xves = XMETEO1(Kves)
+      Yves = YMETEO1(Kves)
+    ELSE
+      Xves = XMETEO2(Kves)*tmp1 +XMETEO1(Kves)*tmp2
+      Yves = YMETEO2(Kves)*tmp1 +YMETEO1(Kves)*tmp2
+    ENDIF
 
-    Xves = XMETEO2(Kves)*tmp1 +XMETEO1(Kves)*tmp2
-    Yves = YMETEO2(Kves)*tmp1 +YMETEO1(Kves)*tmp2
-
+    T=PMETEO(Kves)
+    b=WidthMETEO(Kves)
+    w=LengthMETEO(Kves)
+    epsilon=0.717
 ! rectangular
     METEOPressureEach = ZERO
-    DO J=1,Nloc
-    DO I=1,Mloc
-      Lves=(Xco(I)-Xves)*COS(ThetaMETEO(Kves)) + (Yco(J)-Yves)*SIN(ThetaMETEO(Kves))
-      Wves=-(Xco(I)-Xves)*SIN(ThetaMETEO(Kves)) + (Yco(J)-Yves)*COS(ThetaMETEO(Kves))
-      IF(ABS(Lves)<=0.5_SP*LengthMETEO(Kves).AND. &
-         ABS(Wves)<=0.5_SP*WidthMETEO(Kves)) THEN
-         METEOPressureEach(I,J) = PMETEO(Kves)  &
-                  *COS(PI*Lves/(AlphaMETEO(Kves)*LengthMETEO(Kves)))**2 &
-                  *COS(PI*Wves/(BetaMETEO(Kves)*WidthMETEO(Kves)))**2                  
-      ENDIF
+        C=acosh(1.0/epsilon)
+        Kb=2.0*C/b
+        Kw=2.0*C/w 
+      
+   DO I=1,mloc
+        sech1=(Kw*(Xco(I)-Xves))  
+   DO J=1, nloc
+        
+        sech2=(Kb*(Yco(J)-Yves))
+
+        METEOPressureEach(I,J) =(T/(1.0-epsilon))*(((1./cosh(sech1))*(1./cosh(sech2))) - epsilon)                 
+         IF (METEOPressureEach(I,J)<0.0) THEN
+                 METEOPressureEach(I,J)=0.0   
+         ENDIF
     ENDDO
     ENDDO
 
 120 CONTINUE  ! no more data for METEO Kves
 
     METEOPressureTotal = METEOPressureTotal+METEOPressureEach
-
+!Finding eta at 0 with pressure forcing 3/24- IW JK       
+        IF(FirstCall_Met) THEN
+          Eta=-METEOPressureTotal
+          FirstCall_Met = .FALSE.
+        ENDIF
   ENDDO  ! end Kves
 
 ! sourceX and sourceY
@@ -320,6 +371,16 @@ SUBROUTINE METEO_FORCING
 
     ENDDO
     ENDDO
+!Added to have Pmet output option 4/25/17 IAW
+! FILE_NAME='input.txt'
+ !   CALL READ_LOGICAL(OUT_METEO,FILE_NAME,'Pmet',ierr)
+! IF(OUT_METEO) THEN
+ !       TMP_NAME = TRIM(FDIR)//'Pmet_'//TRIM(FILE_NAME)
+  !      call PutFile(TMP_NAME,METEOPressureTotal)
+! ENDIF
+
+
+
 
 
 END SUBROUTINE METEO_FORCING

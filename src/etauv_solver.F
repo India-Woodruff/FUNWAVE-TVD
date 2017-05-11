@@ -52,6 +52,9 @@
 !-------------------------------------------------------------------------------------
 SUBROUTINE ESTIMATE_HUV(ISTEP)
      USE GLOBAL
+# if defined (VESSEL_PANEL_SOURCE)
+     USE VESSEL_MODULE
+# endif
      IMPLICIT NONE
      INTEGER,INTENT(IN)::ISTEP
      REAL(SP),PARAMETER::n_left=-1.0_SP,n_right=1.0_SP,n_bottom=-1.0_SP,n_top=1.0_SP
@@ -83,7 +86,8 @@ SUBROUTINE ESTIMATE_HUV(ISTEP)
       F_bottom=Q(I,J)
       F_top=Q(I,J+1)
 ! now work for spherical # if defined (CARTESIAN)
-      IF(WAVEMAKER(1:6)=='WK_IRR')THEN
+        IF(WaveMaker(1:6)=='WK_IRR'.OR.WaveMaker(1:6)=='TMA_1D'  &
+           .OR.WaveMaker(1:6)=='JON_1D'.OR.WaveMaker(1:6)=='JON_2D')THEN
 # if defined (PARALLEL)
             xmk=(I-Ibeg)*DXg+npx*(Mloc-2*Nghost)*DXg
             ymk=(J-Jbeg)*DYg+npy*(Nloc-2*Nghost)*DYg
@@ -93,17 +97,21 @@ SUBROUTINE ESTIMATE_HUV(ISTEP)
 # endif
          IF(ABS(xmk-Xc_WK)<Width_WK.AND. &
             ABS(ymk-Yc_WK)<Ywidth_WK/2.0_SP)THEN
-          WK_Source=ZERO
-          DO kf=1,Nfreq
-           WK_Source=WK_Source+TANH(PI/(Time_ramp/FreqPeak)*TIME)*(Cm(I,J,kf) &
-                       *COS(OMGN_IR(KF)*TIME) &
-                       +Sm(I,J,kf)*SIN(OMGN_IR(KF)*TIME))
-          ENDDO
+
+! WaveMaker_Mass was done in sources.F 02/27/2017
+
+!          WK_Source=ZERO
+!          DO kf=1,Nfreq
+!           WK_Source=WK_Source+TANH(PI/(Time_ramp/FreqPeak)*TIME)*(Cm(I,J,kf) &
+!                       *COS(OMGN_IR(KF)*TIME) &
+!                       +Sm(I,J,kf)*SIN(OMGN_IR(KF)*TIME))
+!          ENDDO
 
           R1(I,J)=-1.0_SP/DXg*(F_right*n_right+F_left*n_left) &
                 -1.0_SP/DYg*(F_top*n_top+F_bottom*n_bottom) &
         ! wavemaker
-                +WK_Source      
+                 +WaveMaker_Mass(I,J)
+!                +WK_Source      
          ELSE
          R1(I,J)=-1.0_SP/DXg*(F_right*n_right+F_left*n_left) &
                    -1.0_SP/DYg*(F_top*n_top+F_bottom*n_bottom)
@@ -170,6 +178,11 @@ SUBROUTINE ESTIMATE_HUV(ISTEP)
 # if defined (CARTESIAN)
         R1(I,J)=-1.0_SP/DXg*(F_right*n_right+F_left*n_left) &
                    -1.0_SP/DYg*(F_top*n_top+F_bottom*n_bottom)
+# if defined (VESSEL_PANEL_SOURCE)
+        R1(I,J)=R1(I,J) +VesselFluxGradient(I,J)
+# endif
+  ! end vessel
+
 # else
         R1(I,J)=-1.0_SP/DX(I,J)*(F_right*n_right+F_left*n_left) &
                    -1.0_SP/DY(I,J)*(F_top*n_top+F_bottom*n_bottom)

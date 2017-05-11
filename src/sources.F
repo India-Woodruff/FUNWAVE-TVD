@@ -58,9 +58,15 @@ SUBROUTINE SourceTerms
 # if defined (VESSEL)
      USE VESSEL_MODULE
 # endif
+
+!meteo file added
+# if defined (METEO)
+     USE METEO_MODULE
+# endif
+
      IMPLICIT NONE
      REAL,DIMENSION(Mloc,Nloc) :: nu_vis
-     LOGICAL :: PQ_scheme = .TRUE.
+     LOGICAL :: PQ_scheme = .FALSE.
      REAL(SP) :: xmk,ymk,Dxg,Dyg,WK_Source
      INTEGER :: kd,kf
 
@@ -94,10 +100,12 @@ SUBROUTINE SourceTerms
           WaveMaker_Mass(I,J)=TANH(PI/(Time_ramp*Tperiod)*TIME)*D_gen &
                  *EXP(-Beta_gen*(xmk-Xc_WK)**2)&
                  *SIN(rlamda*(ymk-ZERO)-2.0_SP*PI/Tperiod*TIME)    
-         ENDIF
        ENDIF
 
-       IF(WAVEMAKER(1:6)=='WK_IRR')THEN
+!  added TMA_1D and JON_1D 02/24/2017
+
+        IF(WaveMaker(1:6)=='WK_IRR'.OR.WaveMaker(1:6)=='TMA_1D'  &
+           .OR.WaveMaker(1:6)=='JON_1D'.OR.WaveMaker(1:6)=='JON_2D')THEN
           WK_Source=ZERO
           DO kf=1,Nfreq
            WK_Source=WK_Source+TANH(PI/(Time_ramp/FreqPeak)*TIME)*(Cm(I,J,kf) &
@@ -105,6 +113,7 @@ SUBROUTINE SourceTerms
                        +Sm(I,J,kf)*SIN(OMGN_IR(KF)*TIME))
           ENDDO
           WaveMaker_Mass(I,J)=WK_Source
+
        ENDIF
 
        IF(WAVEMAKER(1:7)=='WK_TIME')THEN
@@ -131,6 +140,8 @@ SUBROUTINE SourceTerms
           WaveMaker_Mass(I,J)=WK_Source
        ENDIF
 
+      ENDIF ! end maker domain
+
          ENDDO
          ENDDO
 
@@ -139,22 +150,33 @@ SUBROUTINE SourceTerms
      nu_vis=ZERO	
 	! ykchoi(08.18.2015)
 	! new variable :: WAVEMAKER_VIS
+        ! should include ghost cells 02/28/2017 fyshi
+
       !IF(VISCOSITY_BREAKING)THEN
       IF(VISCOSITY_BREAKING .OR. WAVEMAKER_VIS)THEN
-       DO J=Jbeg,Jend
-       DO I=Ibeg,Iend
-         nu_vis(I,J)=nu_break(I,J)
-       ENDDO
-       ENDDO
+
+        nu_vis = nu_break
+
+!       DO J=Jbeg,Jend
+!       DO I=Ibeg,Iend
+!         nu_vis(I,J)=nu_break(I,J)
+!       ENDDO
+!       ENDDO
+
       ENDIF
 
 
      IF(DIFFUSION_SPONGE)THEN
-       DO J=Jbeg,Jend
-       DO I=Ibeg,Iend
-         nu_vis(I,J)=nu_vis(I,J)+nu_sponge(I,J)
-       ENDDO
-       ENDDO          
+!    should include ghost cells 02/28/2017, fyshi
+
+       nu_vis = nu_vis + nu_sponge
+
+!       DO J=Jbeg,Jend
+!       DO I=Ibeg,Iend
+!         nu_vis(I,J)=nu_vis(I,J)+nu_sponge(I,J)
+!       ENDDO
+!       ENDDO          
+
      ENDIF
 
 107  format(500f12.6)
@@ -193,6 +215,13 @@ SUBROUTINE SourceTerms
                  - CD_4_SPONGE(I,J)*U(I,J)*SQRT(U(I,J)*U(I,J)+V(I,J)*V(I,J)) &
                    *Depth(I,J)
        ENDIF
+
+       IF(BREAKWATER) THEN
+          ! note that, compared to wei et al, we used flux. so need multiply D
+          SourceX(I,J) = SourceX(I,J) &
+                 - CD_breakwater(I,J)*U(I,J)*SQRT(U(I,J)*U(I,J)+V(I,J)*V(I,J)) &
+                   *Depth(I,J)
+       ENDIF
           
        SourceY(I,J)=GRAV*(Eta(I,J))/DY*(Depthy(I,J+1)-Depthy(I,J))*MASK(I,J) &
                           ! friction
@@ -217,6 +246,13 @@ SUBROUTINE SourceTerms
           ! note that, compared to wei et al, we used flux. so need multiply D
           SourceY(I,J) = SourceY(I,J) &
                    -CD_4_SPONGE(I,J)*V(I,J)*SQRT(U(I,J)*U(I,J)+V(I,J)*V(I,J)) &
+                    *Depth(I,J)             
+       ENDIF
+
+       IF(BREAKWATER) THEN
+          ! note that, compared to wei et al, we used flux. so need multiply D
+          SourceY(I,J) = SourceY(I,J) &
+                   -CD_BREAKWATER(I,J)*V(I,J)*SQRT(U(I,J)*U(I,J)+V(I,J)*V(I,J)) &
                     *Depth(I,J)             
        ENDIF
 
@@ -262,6 +298,10 @@ SUBROUTINE SourceTerms
    IF(VISCOSITY_BREAKING.OR.DIFFUSION_SPONGE.OR.WAVEMAKER_VIS)THEN
 
      IF(PQ_scheme)THEN
+
+!      it turns out P and Q are not exchanged at processor interface
+!      it affects edges, make PQ_scheme=false
+
        SourceX(I,J) = SourceX(I,J) + 0.5_SP/DX*( &
                        nu_vis(I+1,J)* &
                        1.0_SP/DX*(P(I+2,J)-P(I+1,J)) &
@@ -386,8 +426,18 @@ SUBROUTINE SourceTerms
      ENDDO
 
 # if defined (VESSEL)
+# if defined (VESSEL_PANEL_SOURCE)
+   ! no pressure term for panel source 
+# else
       SourceX = SourceX + VesselPressureX
       SourceY = SourceY + VesselPressureY
+# endif
+# endif
+
+!meteo term 4/30 IAW
+# if defined (METEO)
+     SourceX = SourceX + MeteoPressureX
+     SourceY = SourceY + MeteoPressureY
 # endif
 
 

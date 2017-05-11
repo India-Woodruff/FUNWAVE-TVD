@@ -138,6 +138,11 @@ Program FUNWAVE_TVD
      USE VESSEL_MODULE
 # endif
 
+! Meteo module added 3/2/2017
+# if defined (METEO)
+        USE METEO_MODULE
+#endif
+
      IMPLICIT NONE
 
      INTEGER::ISTAGE
@@ -170,6 +175,32 @@ Program FUNWAVE_TVD
 # if defined (VESSEL)
      CALL VESSEL_INITIAL
 # endif
+
+! Meteo module added 3/2/2017
+# if defined(METEO)
+!------------------------------------------------------------------------------------
+!
+!    First, call METEO_INITIAL to read in first two (t,x,y,(p)) values, then,
+!    initialization pressure field.  Subtract this from the initial surface if
+!    the intent is to model a slide as an applied pressure.  (This will need an
+!    input 
+!    variable to choose whether or not to do this.)  JK-3/15/17
+! Input variable added 3/25/17 IAW
+!---------------------------------------------------------------------------------------
+     CALL METEO_INITIAL
+!Need to start the Forcing but still want as close to 0 as possible 3/23/17 IAW
+!     TIME = TIME + 0.00001
+!
+     CALL METEO_FORCING
+!
+!    Set ICOUNT = -1 so that the first stored arrays are at time=0
+!
+    icount = -1
+    call preview
+!!
+# endif 
+
+
 
 ! time integration
 
@@ -213,6 +244,11 @@ Program FUNWAVE_TVD
 # if defined (VESSEL)
        CALL VESSEL_FORCING
 # endif
+
+! Meteo module added 3/2/2017
+# if defined (METEO)
+        CALL METEO_FORCING
+#endif
 
      ! 3-ORDER RUNGE-KUTTA TIME STEPPING
      DO ISTAGE=1,3
@@ -261,7 +297,6 @@ Program FUNWAVE_TVD
         CALL MAX_MIN_PROPERTY
       ENDIF
          
-
       CALL OUTPUT
 
       CALL CHECK_BLOWUP
@@ -278,6 +313,14 @@ DO Kves = 201,200+NumVessel
     CLOSE(Kves)
 ENDDO
 # endif
+
+! Meteo module added 3/2/2017
+# if defined (METEO)
+
+DO Kves= 201, 200+NumMeteo
+    CLOSE(Kves)
+ENDDO
+#endif
 
      ! record wall time at the end
 # if defined (PARALLEL)
